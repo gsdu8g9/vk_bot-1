@@ -7,12 +7,12 @@ import vk_api
 class VkPlus:
     api = None
 
-    def __init__(self, login, password, app_id=-1):
+    def __init__(self, login, password, app_id=-1, access_token=-1):
         try:
             if app_id == -1:
                 self.api = vk_api.VkApi(login, password)
             else:
-                self.api = vk_api.VkApi(login, password, app_id)
+                self.api = vk_api.VkApi(login, password, app_id, access_token)
 
             self.api.auth() # Авторизируемся
         except vk_api.AuthorizationError as error_msg:
