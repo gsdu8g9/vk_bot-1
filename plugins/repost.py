@@ -75,7 +75,7 @@ class Plugin:
             'owner_id': -143343897,
             'post_id': 2,
             'offset': 0,
-            'count': 20
+            'count': 1000
         }
         response = self.vk.api.method('wall.getById', values1)
         if (isinstance(response, list)):
@@ -86,7 +86,7 @@ class Plugin:
                 time.sleep(1)
 
         self.reposted_id_list.clear()
-        if (count < 20):
+        if (count < 1001):
             response = self.vk.api.method('wall.getReposts', values2)
             what = response['profiles']
             for item in what:
