@@ -51,6 +51,8 @@ class logic:
                 with open('sessions.pickle', 'rb') as f:
                     self.user_sessions = pickle.load(f)
                 self.is_started = True
+        except FileNotFoundError:
+            print("File not found.")
         except EOFError:
             print("Sessions file is empty.")
 
