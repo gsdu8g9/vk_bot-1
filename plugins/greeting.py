@@ -3,7 +3,7 @@
 import random
 import time
 import requests
-
+import pickle
 import session
 
 class Plugin:
@@ -20,6 +20,7 @@ class Plugin:
                           'Gecko/20100101 Firefox/40.0'
         })
         self.user_sessions = user_sessions
+
         print('Приветствия')
 
     def getkeys(self):
@@ -33,16 +34,20 @@ class Plugin:
         uid = str(msg['uid'])
         greetings = []
 
+        #TODO: is messages from group is allowed?
+
         greetings.append(u'Привет.')
         greetings.append(u'Здарова.')
 
-        if (msg['uid'] not in self.user_sessions.keys()):
-            self.add_user_session(msg['uid'])
-
-        response = self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+        response = self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                                   self.access_token + '&user_id=' + uid + '&message=' + random.choice(greetings))
-        self.user_sessions[msg['uid']].is_greeted = True
-        time.sleep(1)
+        if (response.text.find("901") == -1):
+            if (msg['uid'] not in self.user_sessions.keys()):
+                self.add_user_session(msg['uid'])
+            self.user_sessions[msg['uid']].is_greeted = True
+            with open('sessions.pickle', 'wb') as f:
+                pickle.dump(self.user_sessions, f)
+        time.sleep(0.5)
 
     def add_user_session(self, id):
         if (id in self.user_sessions.keys()):

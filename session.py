@@ -7,3 +7,4 @@ class session:
     is_fourth = False
     second_quest_cnt = 0
     third_quest_cnt = 0
+    code = ''

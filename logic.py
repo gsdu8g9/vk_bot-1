@@ -2,21 +2,20 @@
 import os
 import sys
 import time
+import pickle
 
 from vkplus import VkPlus
+import vk_api
 
 import settings
 import requests
-import session
-import plugins.first_queston as first_quest
-import plugins.second_question as second_quest
-import plugins.third_question as third_quest
-import plugins.repost as repost
 
 #TODO: time.sleep(1) в каждом плагине
 class logic:
     reposted_id_list = set([])
     members_set = set([])
+    members_count = 0
+    is_started = False
     path = 'plugins/'
     cmds = {}
     plugins = {}
@@ -45,6 +44,16 @@ class logic:
 
         print('---------------------------')
 
+        try:
+            if (not self.is_started):
+                # with open('members.pickle', 'rb') as f:
+                #     self.members_set = pickle.load(f)
+                with open('sessions.pickle', 'rb') as f:
+                    self.user_sessions = pickle.load(f)
+                self.is_started = True
+        except EOFError:
+            print("Sessions file is empty.")
+
         # Подгружаем плагины
         sys.path.insert(0, self.path)
         for f in os.listdir(self.path):
@@ -64,19 +73,29 @@ class logic:
         print('Приступаю к приему сообщений')
 
         while True:
+        #TODO: очередь, чтобы не обращаться к апи слишком часто
+        #TODO: вести диалог с пользователем, только если он в группе
+            try:
+                self.update_members()
+            except ConnectionError:
+                self.vk = VkPlus(settings.vk_login, settings.vk_password,
+                                 settings.vk_app_id)
+            except vk_api.ApiError:
+                self.vk = VkPlus(settings.vk_login, settings.vk_password,
+                             settings.vk_app_id)
 
-            self.update_members()
 
             for item in self.members_set - self.user_sessions.keys():
                 msg = {
                     'uid': item
                 }
                 self.cmds['привет'].call(msg)
-                self.cmds["1322228"].call(msg)
+                if (item in self.user_sessions):
+                    self.cmds["1322228"].call(msg)
 
             self.cmds["4322228"].update_reposted_list()
 
-            response = self.http.post('https://api.vk.com/method/messages.get?filters=1&access_token=' +
+            response = self.http.post('https://api.vk.com/method/messages.get?filters=1&APP_ID=5942264&access_token=' +
                                       self.access_token)
             if (response.ok):
                 response = response.json()['response']
@@ -85,18 +104,19 @@ class logic:
 
             if response[0] > 0:
                 response = response[1:]
+                msg_tmp = None
                 for item in response:
                     message = item
                     print('> ' + message['body'])
                     self.command(message, self.cmds)
                     if (message['uid'] in self.user_sessions.keys()):
                         # if (not self.user_sessions[message['uid']].is_first):
-                        self.ask_questions(message, self.cmds)
+                        self.ask_questions(message)
                     if (message['uid']  not in self.user_sessions.keys()):
-                        self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+                        self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                                 self.access_token + '&user_id=' + str(message['uid']) + '&message=сначала поздоровайся')
-                    self.http.post('https://api.vk.com/method/messages.markAsRead?v=5.41&access_token=' +
-                           self.access_token + '&message_ids=' + str(message['mid']))  # Помечаем прочитанным
+                        self.http.post('https://api.vk.com/method/messages.markAsRead?access_token=' +
+                               self.access_token + '&APP_ID=5942264&message_ids=' + str(message['mid']))
 
             time.sleep(0.5)
 
@@ -107,25 +127,35 @@ class logic:
 
         if words[0].lower() in cmds:
             cmds[words[0].lower()].call(message)
+        if (message['body'] == 'ахалай махалай txt с id мне выдавай!'):
+            cmds['ахалай махалай txt с id мне выдавай!'].call(message)
 
-    def ask_questions(self, message, cmds):
+    def ask_questions(self, message):
+        response = self.http.post('https://api.vk.com/method/groups.isMember?user_id=' + str(message['uid']) + '&group_id=143343897')
+        response = response.json()
+        if (response['response']):
+            self.user_sessions[message['uid']].is_first = True
+        else:
+            self.user_sessions[message['uid']].is_first = False
         if (not self.user_sessions[message['uid']].is_first):
-            cmds["1322228"].call(message)
+            self.cmds["1322228"].call(message)
             return
         if (self.user_sessions[message['uid']].is_first and
                 not self.user_sessions[message['uid']].is_second):
-            cmds["2322228"].call(message)
+            self.cmds["2322228"].call(message)
             return
         if (self.user_sessions[message['uid']].is_first and
                 self.user_sessions[message['uid']].is_second and
                 not self.user_sessions[message['uid']].is_third):
-            cmds["3322228"].call(message)
+            self.cmds["3322228"].call(message)
             return
         if (self.user_sessions[message['uid']].is_first and
                 self.user_sessions[message['uid']].is_second and
                 self.user_sessions[message['uid']].is_third):
-            cmds["4322228"].call(message)
+            self.cmds["4322228"].call(message)
             return
+        self.http.post('https://api.vk.com/method/messages.markAsRead?access_token=' +
+                       self.access_token + '&APP_ID=5942264&message_ids=' + str(message['mid']))
 
     def update_members(self):
         values = {
@@ -135,19 +165,27 @@ class logic:
             'count': 1000
         }
 
+
         response = self.vk.api.method('groups.getMembers', values)
         count = response['count']
+        what = response['items']
+        for item in what:
+            self.members_set.add(item)
 
-        if (count < 1000):
-            response = self.vk.api.method('groups.getMembers', values)
-            what = response['items']
-            for item in what:
-                self.members_set.add(item)
-        else:
-            for i in range(0, int(count / 1000)):
-                values['offset'] = i * 1000
+        if (self.members_count != count):
+            if (count > 1000):
+                for i in range(0, int(count / 1000)):
+                    values['offset'] = i * 1000
+                    values['count'] = 1000
+                    response = self.vk.api.method('groups.getMembers', values)
+                    what = response['items']
+                    for item in what:
+                        self.members_set.add(item)
+                values['offset'] = int(count / 1000) * 1000
                 values['count'] = 1000
-                response = self.vk.api.method('wall.getReposts', values)
+                response = self.vk.api.method('groups.getMembers', values)
                 what = response['items']
                 for item in what:
-                    self.reposted_id_list.add(item)
+                    self.members_set.add(item)
+            # with open('members.pickle', 'wb') as f:
+            #     pickle.dump(self.members_set, f)

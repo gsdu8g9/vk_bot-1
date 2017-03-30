@@ -3,7 +3,7 @@
 import random
 import time
 import requests
-
+import pickle
 import session
 
 class Plugin:
@@ -35,18 +35,24 @@ class Plugin:
 
         if (self.user_sessions[msg['uid']].second_quest_cnt == 0):
             bot_answer = "Сколько будет 2х2?"
-            self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+            self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                            self.access_token + '&user_id=' + str(msg['uid']) + '&message=' + bot_answer)
+            with open('sessions.pickle', 'wb') as f:
+                pickle.dump(self.user_sessions, f)
         else:
             if (user_reply == "4" or user_reply == "четыре"):
                 bot_answer = "Всё верно, матетатик. Готов ответить на следующий?"
-                self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+                self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                                self.access_token + '&user_id=' + str(msg['uid']) + '&message=' + bot_answer)
                 self.user_sessions[msg['uid']].is_second = True
+                with open('sessions.pickle', 'wb') as f:
+                    pickle.dump(self.user_sessions, f)
             else:
                 bot_answer = "Подсказка: это число идет сразу после 3. Сколько будет 2х2?"
-                self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+                self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                            self.access_token + '&user_id=' + str(msg['uid']) + '&message=' + bot_answer)
 
         self.user_sessions[msg['uid']].second_quest_cnt += 1
-        time.sleep(1)
+        with open('sessions.pickle', 'wb') as f:
+            pickle.dump(self.user_sessions, f)
+        time.sleep(0.5)

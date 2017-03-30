@@ -3,7 +3,7 @@
 import random
 import time
 import requests
-
+import pickle
 import session
 
 class Plugin:
@@ -36,21 +36,25 @@ class Plugin:
         if (self.user_sessions[msg['uid']].third_quest_cnt == 0):
             bot_answer = "Ну ты хорош, а назови-ка имя учёного, метод которого используется при разрешении " \
                          "неопределённости вида бесконечность на бесконечность в решении пределов?"
-            self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+            self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                            self.access_token + '&user_id=' + str(msg['uid']) + '&message=' + bot_answer)
         else:
             if (user_reply == "лопиталь" or user_reply == "мне на троечку"):
                 bot_answer = "Правильно."
                 if (user_reply == "мне на троечку"):
                     bot_answer = "Ну ладно, давайте зачетку."
-                bot_answer += "А ты сделал репост? https://vk.com/event143343897?w=wall-143343897_1"
-                self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+                bot_answer += "А ты сделал репост? https://vk.com/event143343897?w=wall-143343897_2"
+                self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                                self.access_token + '&user_id=' + str(msg['uid']) + '&message=' + bot_answer)
                 self.user_sessions[msg['uid']].is_third = True
+                with open('sessions.pickle', 'wb') as f:
+                    pickle.dump(self.user_sessions, f)
             else:
                 bot_answer = "Подсказка: Лопиталь"
-                self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+                self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                            self.access_token + '&user_id=' + str(msg['uid']) + '&message=' + bot_answer)
 
         self.user_sessions[msg['uid']].third_quest_cnt += 1
-        time.sleep(1)
+        with open('sessions.pickle', 'wb') as f:
+            pickle.dump(self.user_sessions, f)
+        time.sleep(0.5)

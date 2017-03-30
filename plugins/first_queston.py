@@ -3,7 +3,7 @@
 import random
 import time
 import requests
-
+import pickle
 import session
 
 class Plugin:
@@ -35,12 +35,14 @@ class Plugin:
         response = self.http.post('https://api.vk.com/method/groups.isMember?user_id=' + uid + '&group_id=143343897')
         response = response.json()
 
-        if (response['response']):
+        if (response['response'] and self.user_sessions[msg['uid']].is_greeted):
             self.user_sessions[msg['uid']].is_first = True
-            self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+            with open('sessions.pickle', 'wb') as f:
+                pickle.dump(self.user_sessions, f)
+            self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                    self.access_token + '&user_id=' + str(msg['uid']) + '&message=Я вижу, ты уже вступил. Готов ответить на вопросы?')
         else:
-            self.http.post('https://api.vk.com/method/messages.send?access_token=' +
+            self.http.post('https://api.vk.com/method/messages.send?APP_ID=5942264&access_token=' +
                    self.access_token + '&user_id=' + str(msg['uid']) + '&message=Вступай в нашу группу')
 
-        time.sleep(1)
+        time.sleep(0.5)
